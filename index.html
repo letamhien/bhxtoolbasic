@@ -197,8 +197,6 @@
     .hist-exp  { background: var(--red-light);   color: var(--red-text); }
 
     .footer { text-align: center; font-size: 11px; color: var(--text-muted); padding: 8px 0 4px; }
-
-    /* ===== PRICE TAB ===== */
     .price-result-top {
       background: var(--green-light); border-bottom: 1.5px solid var(--green-mid);
       padding: 14px 16px; display: none; flex-shrink: 0;
@@ -267,8 +265,6 @@
       0%{ transform:scale(0.92); opacity:0; } 60%{ transform:scale(1.02); } 100%{ transform:scale(1); opacity:1; }
     }
     .pop { animation: pop 0.25s ease; }
-
-    /* ===== CSS QUÉT CAMERA TRỰC TIẾP ===== */
     .scanner-modal {
       position: fixed; inset: 0; background: #000; z-index: 999;
       display: none; flex-direction: column;
@@ -643,7 +639,6 @@
       resultEl.classList.add('show');
     }
 
-    // ===== LOGIC CAMERA TRỰC TIẾP & CẮT ẢNH =====
     var videoStream = null;
 
     async function startCamera() {
@@ -672,18 +667,13 @@
     async function captureAndScan() {
       var video = document.getElementById('camera-stream');
       var scanBox = document.getElementById('scan-box');
-      
-      // Tạo canvas lấy toàn bộ khung hình
       var canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Tính toán tỷ lệ để crop vùng trong khung chữ nhật
       var videoRect = video.getBoundingClientRect();
       var boxRect = scanBox.getBoundingClientRect();
-      
       var scaleX = canvas.width / videoRect.width;
       var scaleY = canvas.height / videoRect.height;
 
@@ -691,28 +681,21 @@
       var cropY = (boxRect.top - videoRect.top) * scaleY;
       var cropW = boxRect.width * scaleX;
       var cropH = boxRect.height * scaleY;
-
-      // Tạo canvas mới chứa ảnh đã crop
       var cropCanvas = document.createElement('canvas');
       cropCanvas.width = cropW;
       cropCanvas.height = cropH;
       var cropCtx = cropCanvas.getContext('2d');
       cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
       stopCamera();
-      
       var statusEl = document.getElementById('ocr-status');
       statusEl.style.display = 'block';
       statusEl.textContent = '⏳ AI đang phân tích dữ liệu, vui lòng đợi...';
       statusEl.style.color = 'var(--amber-text)';
-
       try {
         var imageData = cropCanvas.toDataURL('image/png');
         var result = await Tesseract.recognize(imageData, 'eng');
         var text = result.data.text;
-        
         var dateStr = extractDateFromText(text);
-        
         if (dateStr) {
           document.getElementById('nsx').value = dateStr;
           statusEl.textContent = '✅ Quét thành công: ' + dateStr;
@@ -728,22 +711,18 @@
     }
 
     function extractDateFromText(text) {
-      // Hỗ trợ dấu /, -, ., và khoảng trắng \s
       var regexDMY = /\b(\d{1,2})[\/\-\.\s]+(\d{1,2})[\/\-\.\s]+(\d{2,4})\b/g;
       var regexYMD = /\b(\d{4})[\/\-\.\s]+(\d{1,2})[\/\-\.\s]+(\d{1,2})\b/g;
-
       var match;
       var foundDates = [];
-
       while ((match = regexYMD.exec(text)) !== null) {
         foundDates.push(formatToInputDate(match[1], match[2], match[3]));
       }
       while ((match = regexDMY.exec(text)) !== null) {
         var year = match[3];
-        if (year.length === 2) year = '20' + year; // Xử lý năm 2 số
+        if (year.length === 2) year = '20' + year;
         foundDates.push(formatToInputDate(year, match[2], match[1]));
       }
-
       for (var i = 0; i < foundDates.length; i++) {
         if (foundDates[i]) return foundDates[i];
       }
