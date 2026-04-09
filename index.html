@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Tính HSD" />
-  <title>Tính Ngày HSD</title>
+  <title>Tính Ngày HSD & Giá</title>
   <style>
     :root {
       --green: #1D9E75;
@@ -267,6 +267,45 @@
       0%{ transform:scale(0.92); opacity:0; } 60%{ transform:scale(1.02); } 100%{ transform:scale(1); opacity:1; }
     }
     .pop { animation: pop 0.25s ease; }
+
+    /* ===== CSS QUÉT CAMERA TRỰC TIẾP ===== */
+    .scanner-modal {
+      position: fixed; inset: 0; background: #000; z-index: 999;
+      display: none; flex-direction: column;
+    }
+    .scanner-modal.active { display: flex; }
+    .scanner-header {
+      padding: 15px; display: flex; justify-content: space-between; align-items: center;
+      background: rgba(0,0,0,0.5); color: #fff; position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    }
+    .close-scanner { background: none; border: none; color: #fff; font-size: 14px; font-weight: bold; padding: 10px; cursor: pointer; }
+    .video-container {
+      flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    }
+    #camera-stream { width: 100%; height: 100%; object-fit: cover; }
+    
+    .scan-box {
+      position: absolute; top: 40%; left: 15%; right: 15%; bottom: 40%;
+      border: 2px solid #1D9E75; border-radius: 8px; 
+      box-shadow: 0 0 0 4000px rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+    }
+    .scan-box::after {
+      content: 'Đặt NSX hoặc HSD vào trong khung'; position: absolute; bottom: -30px;
+      color: #1D9E75; font-size: 13px; font-weight: 600; width: 100%; text-align: center;
+    }
+    
+    .scanner-footer {
+      padding: 30px 20px; background: #000; display: flex; justify-content: center;
+      padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+    }
+    .capture-btn {
+      width: 70px; height: 70px; border-radius: 50%; background: var(--green); border: 4px solid #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .capture-btn:active { transform: scale(0.95); background: var(--green-dark); }
+
   </style>
 </head>
 <body>
@@ -300,7 +339,6 @@
 
   <div class="panels-wrap">
 
-    <!-- ===== PANEL HSD ===== -->
     <div class="tab-panel active" id="panel-hsd">
       <div class="scroll-body">
 
@@ -309,15 +347,11 @@
           <div style="position: relative; display: flex; align-items: center; gap: 8px;">
             <input type="date" id="nsx" style="flex: 1;" />
             
-            <label for="camera-input" style="width: 50px; height: 50px; background: var(--green-light); border: 1.5px solid var(--green); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--green-dark); flex-shrink: 0;">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-            </label>
-            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;" />
+            <button onclick="startCamera()" style="width: 50px; height: 50px; background: var(--green-light); border: 1.5px solid var(--green); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--green-dark); flex-shrink: 0; padding: 0;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </button>
           </div>
-          <div id="ocr-status" style="font-size: 12px; margin-top: 8px; display: none; font-weight: 500;">⏳ Đang quét hình ảnh...</div>
+          <div id="ocr-status" style="font-size: 13px; margin-top: 8px; display: none; font-weight: 500;"></div>
           <div class="err-msg" id="err-nsx">⚠ Vui lòng chọn ngày sản xuất</div>
         </div>
 
@@ -361,7 +395,6 @@
       </div>
     </div>
 
-    <!-- ===== PANEL GIÁ ===== -->
     <div class="tab-panel" id="panel-gia">
 
       <div class="price-result-top" id="price-result-top">
@@ -424,6 +457,24 @@
 
   </div>
 
+  <div class="scanner-modal" id="scanner-modal">
+    <div class="scanner-header">
+      <span>Quét Ngày Tháng</span>
+      <button class="close-scanner" onclick="stopCamera()">ĐÓNG</button>
+    </div>
+    <div class="video-container">
+      <video id="camera-stream" autoplay playsinline></video>
+      <div class="scan-box" id="scan-box"></div>
+    </div>
+    <div class="scanner-footer">
+      <div class="capture-btn" onclick="captureAndScan()">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  
   <script>
     var currentType  = 'days';
     var historyData  = [];
@@ -557,7 +608,7 @@
       if (!n) return '0 ₫';
       if (n >= 1000000000) { var b=n/1000000000; return (Number.isInteger(b)?b:b.toFixed(1))+' tỷ ₫'; }
       if (n >= 1000000)    { var t=n/1000000;     return (Number.isInteger(t)?t:t.toFixed(1))+' triệu ₫'; }
-      if (n >= 1000)       { var k=n/1000;         return (Number.isInteger(k)?k:k.toFixed(0))+'k ₫'; }
+      if (n >= 1000)       { var k=n/1000;        return (Number.isInteger(k)?k:k.toFixed(0))+'k ₫'; }
       return fmtVND(n);
     }
 
@@ -592,70 +643,107 @@
       resultEl.classList.add('show');
     }
 
-    (function init() {
-      var t = new Date();
-      document.getElementById('nsx').value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-      renderQuick();
-      renderHistory();
-    })();
-    // ===== TÍNH NĂNG QUÉT CAMERA TÌM NGÀY =====
-    document.getElementById('camera-input').addEventListener('change', async function(e) {
-      var file = e.target.files[0];
-      if (!file) return;
+    // ===== LOGIC CAMERA TRỰC TIẾP & CẮT ẢNH =====
+    var videoStream = null;
 
+    async function startCamera() {
+      var modal = document.getElementById('scanner-modal');
+      var video = document.getElementById('camera-stream');
+      modal.classList.add('active');
+
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "environment" } 
+        });
+        video.srcObject = videoStream;
+      } catch (err) {
+        alert("Không thể mở camera. Vui lòng cấp quyền truy cập máy ảnh cho trình duyệt (trên điện thoại cần dùng HTTPS).");
+        stopCamera();
+      }
+    }
+
+    function stopCamera() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(function(track) { track.stop(); });
+      }
+      document.getElementById('scanner-modal').classList.remove('active');
+    }
+
+    async function captureAndScan() {
+      var video = document.getElementById('camera-stream');
+      var scanBox = document.getElementById('scan-box');
+      
+      // Tạo canvas lấy toàn bộ khung hình
+      var canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Tính toán tỷ lệ để crop vùng trong khung chữ nhật
+      var videoRect = video.getBoundingClientRect();
+      var boxRect = scanBox.getBoundingClientRect();
+      
+      var scaleX = canvas.width / videoRect.width;
+      var scaleY = canvas.height / videoRect.height;
+
+      var cropX = (boxRect.left - videoRect.left) * scaleX;
+      var cropY = (boxRect.top - videoRect.top) * scaleY;
+      var cropW = boxRect.width * scaleX;
+      var cropH = boxRect.height * scaleY;
+
+      // Tạo canvas mới chứa ảnh đã crop
+      var cropCanvas = document.createElement('canvas');
+      cropCanvas.width = cropW;
+      cropCanvas.height = cropH;
+      var cropCtx = cropCanvas.getContext('2d');
+      cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+      stopCamera();
+      
       var statusEl = document.getElementById('ocr-status');
       statusEl.style.display = 'block';
-      statusEl.textContent = '⏳ Đang AI phân tích hình ảnh, vui lòng đợi vài giây...';
+      statusEl.textContent = '⏳ AI đang phân tích dữ liệu, vui lòng đợi...';
       statusEl.style.color = 'var(--amber-text)';
 
       try {
-        // Dùng Tesseract để đọc chữ từ ảnh (dùng model tiếng Anh 'eng' để đọc số cho nhanh)
-        var result = await Tesseract.recognize(file, 'eng'); 
+        var imageData = cropCanvas.toDataURL('image/png');
+        var result = await Tesseract.recognize(imageData, 'eng');
         var text = result.data.text;
         
-        // Trích xuất ngày từ đoạn text thu được
         var dateStr = extractDateFromText(text);
         
         if (dateStr) {
           document.getElementById('nsx').value = dateStr;
-          statusEl.textContent = '✅ Đã quét thành công!';
+          statusEl.textContent = '✅ Quét thành công: ' + dateStr;
           statusEl.style.color = 'var(--green-dark)';
-          setTimeout(function() { statusEl.style.display = 'none'; }, 3000);
+          setTimeout(function() { statusEl.style.display = 'none'; }, 4000);
         } else {
-          statusEl.textContent = '❌ Không tìm thấy ngày. Vui lòng chụp rõ hơn hoặc nhập tay.';
+          statusEl.textContent = '❌ Không nhận ra ngày. Hãy thử để gần và lấy nét rõ hơn.';
           statusEl.style.color = 'var(--red)';
         }
       } catch (err) {
-        console.error(err);
-        statusEl.textContent = '❌ Lỗi khi quét ảnh.';
-        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = '❌ Lỗi AI xử lý ảnh.';
       }
-      
-      // Reset input để có thể chụp lại tấm ảnh cũ nếu muốn
-      e.target.value = '';
-    });
+    }
 
     function extractDateFromText(text) {
-      // Quét các định dạng: dd/mm/yyyy, dd.mm.yy, dd-mm-yyyy
-      var regexDMY = /\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/g;
-      // Quét các định dạng: yyyy/mm/dd, yyyy-mm-dd
-      var regexYMD = /\b(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})\b/g;
+      // Hỗ trợ dấu /, -, ., và khoảng trắng \s
+      var regexDMY = /\b(\d{1,2})[\/\-\.\s]+(\d{1,2})[\/\-\.\s]+(\d{2,4})\b/g;
+      var regexYMD = /\b(\d{4})[\/\-\.\s]+(\d{1,2})[\/\-\.\s]+(\d{1,2})\b/g;
 
       var match;
       var foundDates = [];
 
-      // Ưu tiên tìm YYYY-MM-DD
       while ((match = regexYMD.exec(text)) !== null) {
         foundDates.push(formatToInputDate(match[1], match[2], match[3]));
       }
-      // Tìm DD-MM-YYYY
       while ((match = regexDMY.exec(text)) !== null) {
         var year = match[3];
-        if (year.length === 2) year = '20' + year; // Chuyển năm 24 thành 2024
+        if (year.length === 2) year = '20' + year; // Xử lý năm 2 số
         foundDates.push(formatToInputDate(year, match[2], match[1]));
       }
 
-      // Trả về kết quả hợp lệ đầu tiên tìm được
       for (var i = 0; i < foundDates.length; i++) {
         if (foundDates[i]) return foundDates[i];
       }
@@ -663,17 +751,17 @@
     }
 
     function formatToInputDate(y, m, d) {
-      var year = parseInt(y);
-      var month = parseInt(m);
-      var day = parseInt(d);
-      
-      // Loại bỏ các kết quả vô lý
+      var year = parseInt(y); var month = parseInt(m); var day = parseInt(d);
       if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > 2100) return null;
-      
-      // Trả về chuẩn YYYY-MM-DD để nhét vào thẻ <input type="date">
       return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     }
+
+    (function init() {
+      var t = new Date();
+      document.getElementById('nsx').value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+      renderQuick();
+      renderHistory();
+    })();
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </body>
 </html>
