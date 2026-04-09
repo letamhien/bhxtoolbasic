@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1D9E75" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tính HSD" />
+  <title>Tính Ngày HSD</title>
+  <style>
+    :root {
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --green-light: #EAF3DE;
+      --green-mid: #97C459;
+      --green-text: #27500A;
+      --amber: #EF9F27;
+      --amber-light: #FAEEDA;
+      --amber-text: #633806;
+      --red: #E24B4A;
+      --red-light: #FCEBEB;
+      --red-text: #791F1F;
+      --bg: #F5F7F5;
+      --surface: #FFFFFF;
+      --border: rgba(0,0,0,0.1);
+      --text: #1a1a1a;
+      --text-muted: #6b7280;
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html { height: 100%; height: -webkit-fill-available; }
+    body {
+      height: 100%;
+      height: -webkit-fill-available;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overscroll-behavior: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .safe-top { height: env(safe-area-inset-top, 0px); background: var(--green); flex-shrink: 0; }
+    .header {
+      background: var(--green);
+      padding: 14px 20px 16px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-icon svg { width: 22px; height: 22px; }
+    .header-text h1 { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .header-text p  { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+
+    .tab-bar {
+      display: flex; background: var(--green-dark);
+      padding: 6px 12px 0; gap: 4px; flex-shrink: 0;
+    }
+    .tab-item {
+      flex: 1; padding: 10px 6px 11px; border: none;
+      background: transparent; color: rgba(255,255,255,0.6);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.18s, color 0.18s;
+      -webkit-appearance: none;
+    }
+    .tab-item.active { background: var(--bg); color: var(--green-dark); }
+    .tab-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .panels-wrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+    .tab-panel {
+      display: none; position: absolute; inset: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .tab-panel.active { display: block; }
+    .scroll-body {
+      padding: 16px 16px 0;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 12px; border: 1px solid var(--border);
+    }
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+
+    input[type="date"] {
+      width: 100%; padding: 13px 14px;
+      font-size: 17px; font-weight: 500;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); color: var(--text);
+      outline: none; -webkit-appearance: none; appearance: none; min-height: 50px;
+    }
+    input[type="date"]:focus { border-color: var(--green); background: #fff; }
+
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .type-btn {
+      padding: 12px 0; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); color: var(--text-muted); font-size: 15px; font-weight: 500;
+      cursor: pointer; text-align: center; -webkit-appearance: none;
+    }
+    .type-btn.active { background: var(--green); border-color: var(--green); color: #fff; }
+    .type-btn:active { transform: scale(0.96); }
+
+    .number-row { display: flex; align-items: center; gap: 8px; }
+    .num-btn {
+      width: 46px; height: 46px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); font-size: 22px; font-weight: 300; color: var(--green-dark);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; -webkit-appearance: none;
+    }
+    .num-btn:active { background: var(--green-light); transform: scale(0.94); }
+    input[type="number"] {
+      flex: 1; padding: 11px 0; font-size: 22px; font-weight: 600;
+      text-align: center; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); color: var(--text); outline: none;
+      -webkit-appearance: none; -moz-appearance: textfield;
+    }
+    input[type="number"]:focus { border-color: var(--green); background: #fff; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .unit-label { font-size: 14px; color: var(--text-muted); font-weight: 500; min-width: 46px; text-align: center; }
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .quick-btn {
+      padding: 9px 0; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); color: var(--text-muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; text-align: center; -webkit-appearance: none;
+    }
+    .quick-btn:active { background: var(--green-light); border-color: var(--green); color: var(--green-dark); transform: scale(0.95); }
+
+    .calc-btn {
+      width: 100%; padding: 16px; background: var(--green); color: #fff;
+      border: none; border-radius: var(--radius); font-size: 17px; font-weight: 700;
+      cursor: pointer; margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(29,158,117,0.35); -webkit-appearance: none;
+    }
+    .calc-btn:active { background: var(--green-dark); transform: scale(0.98); }
+
+    .result-card { border-radius: var(--radius); padding: 18px; display: none; margin-bottom: 12px; border: 1.5px solid; }
+    .result-card.ok      { background: var(--green-light); border-color: var(--green-mid); }
+    .result-card.warn    { background: var(--amber-light); border-color: var(--amber); }
+    .result-card.expired { background: var(--red-light);   border-color: var(--red); }
+    .res-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; margin-bottom: 10px; }
+    .ok .res-badge      { background: var(--green); color: #fff; }
+    .warn .res-badge    { background: var(--amber); color: #fff; }
+    .expired .res-badge { background: var(--red);   color: #fff; }
+    .res-day { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+    .ok .res-day      { color: var(--green-dark); }
+    .warn .res-day    { color: var(--amber-text); }
+    .expired .res-day { color: var(--red-text); }
+    .res-date { font-size: 30px; font-weight: 800; line-height: 1.1; margin-bottom: 10px; }
+    .ok .res-date      { color: var(--green-dark); }
+    .warn .res-date    { color: var(--amber-text); }
+    .expired .res-date { color: var(--red-text); }
+    .res-divider { height: 1px; margin-bottom: 10px; }
+    .ok .res-divider      { background: var(--green-mid); }
+    .warn .res-divider    { background: var(--amber); opacity: 0.4; }
+    .expired .res-divider { background: var(--red);   opacity: 0.4; }
+    .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .res-row-label { font-size: 13px; }
+    .ok .res-row-label      { color: var(--green-dark); opacity: 0.7; }
+    .warn .res-row-label    { color: var(--amber-text); opacity: 0.7; }
+    .expired .res-row-label { color: var(--red-text);   opacity: 0.7; }
+    .res-row-val { font-size: 13px; font-weight: 600; }
+    .ok .res-row-val      { color: var(--green-text); }
+    .warn .res-row-val    { color: var(--amber-text); }
+    .expired .res-row-val { color: var(--red-text); }
+
+    .err-msg { font-size: 12px; color: var(--red); margin-top: 6px; display: none; font-weight: 500; }
+
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .history-item:last-child  { border-bottom: none; padding-bottom: 0; }
+    .history-item:first-child { padding-top: 0; }
+    .hist-left { flex: 1; }
+    .hist-name { font-size: 13px; color: var(--text-muted); }
+    .hist-date { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 1px; }
+    .hist-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .hist-ok   { background: var(--green-light); color: var(--green-dark); }
+    .hist-warn { background: var(--amber-light); color: var(--amber-text); }
+    .hist-exp  { background: var(--red-light);   color: var(--red-text); }
+
+    .footer { text-align: center; font-size: 11px; color: var(--text-muted); padding: 8px 0 4px; }
+
+    /* ===== PRICE TAB ===== */
+    .price-result-top {
+      background: var(--green-light); border-bottom: 1.5px solid var(--green-mid);
+      padding: 14px 16px; display: none; flex-shrink: 0;
+    }
+    .price-result-top.show { display: block; }
+    .pr-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .pr-top-label { font-size: 12px; color: var(--green-dark); opacity: 0.7; }
+    .pr-top-val   { font-size: 13px; font-weight: 600; color: var(--green-text); }
+    .pr-top-divider { height: 1px; background: var(--green-mid); opacity: 0.4; margin: 8px 0; }
+    .pr-top-final-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .pr-top-final-label { font-size: 14px; font-weight: 700; color: var(--green-dark); }
+    .pr-top-final-val   { font-size: 28px; font-weight: 800; color: var(--green-dark); letter-spacing: -0.5px; }
+    .pr-top-saved {
+      margin-top: 8px; background: var(--green); color: #fff; border-radius: 8px;
+      padding: 7px 12px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .pr-top-saved-label { font-size: 12px; font-weight: 600; opacity: 0.9; }
+    .pr-top-saved-val   { font-size: 14px; font-weight: 800; }
+
+    .price-scroll {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 12px 16px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .price-row { display: flex; flex-direction: row; gap: 10px; align-items: stretch; margin-bottom: 12px; }
+    .price-field, .discount-field {
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+      min-width: 0; overflow: hidden;
+    }
+    .price-field    { flex: 3; }
+    .discount-field { flex: 2; }
+    .pf-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pf-input-row { display: flex; align-items: baseline; gap: 3px; min-width: 0; }
+    .pf-input-row input {
+      flex: 1; min-width: 0; width: 100%; border: none; background: transparent;
+      font-size: 26px; font-weight: 700; color: var(--text); outline: none;
+      -webkit-appearance: none; -moz-appearance: textfield; padding: 0;
+    }
+    .pf-input-row input::-webkit-outer-spin-button,
+    .pf-input-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .pf-suffix { font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+
+    .pct-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 12px; }
+    .pct-btn {
+      padding: 10px 0; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface); color: var(--text-muted); font-size: 14px; font-weight: 600;
+      cursor: pointer; text-align: center; -webkit-appearance: none;
+    }
+    .pct-btn:active { background: var(--green-light); border-color: var(--green); color: var(--green-dark); transform: scale(0.95); }
+    .pct-btn.active-pct { background: var(--green); border-color: var(--green); color: #fff; }
+
+    .price-empty { text-align: center; padding: 24px 20px; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+    .price-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+    @keyframes shake {
+      0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-6px); }
+      40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); }
+    }
+    .shake { animation: shake 0.35s ease; }
+    @keyframes pop {
+      0%{ transform:scale(0.92); opacity:0; } 60%{ transform:scale(1.02); } 100%{ transform:scale(1); opacity:1; }
+    }
+    .pop { animation: pop 0.25s ease; }
+  </style>
+</head>
+<body>
+  <div class="safe-top"></div>
+
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 22 22" fill="none">
+        <rect x="2" y="3" width="18" height="17" rx="3" stroke="white" stroke-width="1.8"/>
+        <path d="M7 2v2M15 2v2" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M2 8h18" stroke="white" stroke-width="1.5"/>
+        <path d="M7 12h2M11 12h2M7 15.5h2M11 15.5h2M15 12h1" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>Tính Ngày HSD</h1>
+      <p>Kiểm tra hạn sử dụng sản phẩm</p>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-item active" id="tab-hsd" onclick="switchTab('hsd')">
+      <svg viewBox="0 0 22 22" fill="none"><rect x="2" y="3" width="18" height="17" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M7 2v2M15 2v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M2 8h18" stroke="currentColor" stroke-width="1.5"/><path d="M7 12h2M11 12h2M7 15.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Tính HSD
+    </button>
+    <button class="tab-item" id="tab-gia" onclick="switchTab('gia')">
+      <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M11 6v1.5M11 14.5V16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 9.2C8.5 8.3 9.2 7.5 11 7.5c1.4 0 2.5.8 2.5 2 0 2.5-4 2-4 4.5 0 1.2 1.1 2 2.5 2 1.8 0 2.5-.9 2.5-1.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Tính Giá
+    </button>
+  </div>
+
+  <div class="panels-wrap">
+
+    <!-- ===== PANEL HSD ===== -->
+    <div class="tab-panel active" id="panel-hsd">
+      <div class="scroll-body">
+
+        <div class="card">
+          <div class="section-label">Ngày sản xuất (NSX)</div>
+          <input type="date" id="nsx" />
+          <div class="err-msg" id="err-nsx">⚠ Vui lòng chọn ngày sản xuất</div>
+        </div>
+
+        <div class="card">
+          <div class="section-label">Hạn sử dụng tính theo</div>
+          <div class="type-grid">
+            <button class="type-btn active" onclick="selectType('days',this)">Ngày</button>
+            <button class="type-btn" onclick="selectType('months',this)">Tháng</button>
+            <button class="type-btn" onclick="selectType('years',this)">Năm</button>
+          </div>
+          <div class="number-row">
+            <button class="num-btn" onclick="stepNum(-1)">−</button>
+            <input type="number" id="duration" min="1" max="9999" placeholder="0" inputmode="numeric" />
+            <span class="unit-label" id="unit-lbl">ngày</span>
+            <button class="num-btn" onclick="stepNum(1)">+</button>
+          </div>
+          <div class="err-msg" id="err-dur">⚠ Vui lòng nhập số lớn hơn 0</div>
+          <div class="divider"></div>
+          <div class="section-label" style="margin-bottom:8px;">Chọn nhanh</div>
+          <div class="quick-grid" id="quick-grid"></div>
+        </div>
+
+        <button class="calc-btn" onclick="calculate()">TÍNH NGÀY HẾT HẠN</button>
+
+        <div class="result-card" id="result">
+          <span class="res-badge" id="res-badge"></span>
+          <div class="res-day" id="res-day"></div>
+          <div class="res-date" id="res-date"></div>
+          <div class="res-divider"></div>
+          <div class="res-row"><span class="res-row-label">NSX</span><span class="res-row-val" id="res-nsx"></span></div>
+          <div class="res-row"><span class="res-row-label">Thời hạn</span><span class="res-row-val" id="res-dur"></span></div>
+          <div class="res-row"><span class="res-row-label" id="res-remain-lbl">Còn lại</span><span class="res-row-val" id="res-remain"></span></div>
+        </div>
+
+        <div class="card" id="history-section" style="display:none;">
+          <div class="section-label">Lịch sử tra cứu</div>
+          <div id="history-list"></div>
+        </div>
+
+        <div class="footer">Công cụ kiểm tra HSD by Hiển</div>
+      </div>
+    </div>
+
+    <!-- ===== PANEL GIÁ ===== -->
+    <div class="tab-panel" id="panel-gia">
+
+      <div class="price-result-top" id="price-result-top">
+        <div class="pr-top-row">
+          <span class="pr-top-label">Giá gốc</span>
+          <span class="pr-top-val" id="pr-original"></span>
+        </div>
+        <div class="pr-top-row">
+          <span class="pr-top-label">Số tiền giảm (<span id="pr-discount-pct2"></span>)</span>
+          <span class="pr-top-val" id="pr-discount-amt"></span>
+        </div>
+        <div class="pr-top-divider"></div>
+        <div class="pr-top-final-row">
+          <span class="pr-top-final-label">Giá sau giảm</span>
+          <span class="pr-top-final-val" id="pr-final"></span>
+        </div>
+        <div class="pr-top-saved">
+          <span class="pr-top-saved-label">💰 Tiết kiệm được</span>
+          <span class="pr-top-saved-val" id="pr-saved"></span>
+        </div>
+      </div>
+
+      <div class="price-scroll">
+        <div class="price-empty" id="price-empty">
+          <div class="price-empty-icon">🧮</div>
+          Nhập giá và % giảm để tính ngay
+        </div>
+
+        <div class="price-row">
+          <div class="price-field">
+            <span class="pf-label">Giá gốc (ngàn đồng)</span>
+            <div class="pf-input-row">
+              <input type="number" id="price-input" placeholder="0" min="0" inputmode="decimal" oninput="onPriceChange()" />
+              <span class="pf-suffix">.000 ₫</span>
+            </div>
+          </div>
+          <div class="discount-field">
+            <span class="pf-label">Giảm giá</span>
+            <div class="pf-input-row">
+              <input type="number" id="discount-input" placeholder="0" min="0" max="100" inputmode="decimal" oninput="onPriceChange()" />
+              <span class="pf-suffix">%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pct-grid">
+          <button class="pct-btn" id="pct-5"  onclick="setDiscount(5)">5%</button>
+          <button class="pct-btn" id="pct-10" onclick="setDiscount(10)">10%</button>
+          <button class="pct-btn" id="pct-20" onclick="setDiscount(20)">20%</button>
+          <button class="pct-btn" id="pct-30" onclick="setDiscount(30)">30%</button>
+          <button class="pct-btn" id="pct-40" onclick="setDiscount(40)">40%</button>
+          <button class="pct-btn" id="pct-50" onclick="setDiscount(50)">50%</button>
+          <button class="pct-btn" id="pct-70" onclick="setDiscount(70)">70%</button>
+          <button class="pct-btn" id="pct-0"  onclick="setDiscount(0)">Xoá %</button>
+        </div>
+
+        <div class="footer">Công cụ tính giá by Hiển</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    var currentType  = 'days';
+    var historyData  = [];
+    try { historyData = JSON.parse(localStorage.getItem('hsd_history') || '[]'); } catch(e) {}
+
+    var presets      = { days:[3,5,7,14], months:[1,3,6,12], years:[1,2,3,5] };
+    var presetLabels = { days:['3 ngày','5 ngày','7 ngày','14 ngày'], months:['1 tháng','3 tháng','6 tháng','12 tháng'], years:['1 năm','2 năm','3 năm','5 năm'] };
+    var unitLabels   = { days:'ngày', months:'tháng', years:'năm' };
+    var daysVN       = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+
+    function selectType(type, btn) {
+      currentType = type;
+      document.querySelectorAll('.type-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('duration').value = '';
+      document.getElementById('unit-lbl').textContent = unitLabels[type];
+      renderQuick();
+      document.getElementById('result').style.display = 'none';
+    }
+
+    function stepNum(delta) {
+      var inp = document.getElementById('duration');
+      inp.value = Math.max(1, (parseInt(inp.value) || 0) + delta);
+    }
+
+    function renderQuick() {
+      var grid = document.getElementById('quick-grid');
+      grid.innerHTML = '';
+      presets[currentType].forEach(function(v, i) {
+        var btn = document.createElement('button');
+        btn.className = 'quick-btn';
+        btn.textContent = presetLabels[currentType][i];
+        btn.onclick = (function(val){ return function(){ document.getElementById('duration').value = val; calculate(); }; })(v);
+        grid.appendChild(btn);
+      });
+    }
+
+    function addTime(date, amount, type) {
+      var d = new Date(date.getTime());
+      if (type === 'days')   d.setDate(d.getDate() + amount);
+      if (type === 'months') d.setMonth(d.getMonth() + amount);
+      if (type === 'years')  d.setFullYear(d.getFullYear() + amount);
+      return d;
+    }
+
+    function fmtDate(d) {
+      return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+    function fmtDateLong(d) {
+      return daysVN[d.getDay()] + ', ngày ' + d.getDate() + ' tháng ' + (d.getMonth()+1) + ' năm ' + d.getFullYear();
+    }
+    function daysDiff(d1, d2) { return Math.round((d2 - d1) / 86400000); }
+
+    function calculate() {
+      var nsxVal = document.getElementById('nsx').value;
+      var durVal = parseInt(document.getElementById('duration').value);
+      document.getElementById('err-nsx').style.display = 'none';
+      document.getElementById('err-dur').style.display = 'none';
+      var ok = true;
+      if (!nsxVal) { document.getElementById('err-nsx').style.display='block'; shake(document.getElementById('nsx')); ok=false; }
+      if (!durVal || durVal < 1) { document.getElementById('err-dur').style.display='block'; shake(document.getElementById('duration')); ok=false; }
+      if (!ok) return;
+
+      var nsx = new Date(nsxVal + 'T00:00:00');
+      var hsd = addTime(nsx, durVal, currentType);
+      var today = new Date(); today.setHours(0,0,0,0);
+      var remaining = daysDiff(today, hsd);
+      var durText   = durVal + ' ' + unitLabels[currentType];
+      var card = document.getElementById('result');
+      card.className = 'result-card';
+      var badge, remain, remainLbl;
+
+      if (remaining < 0) {
+        card.classList.add('expired'); badge='ĐÃ HẾT HẠN'; remainLbl='Hết hạn cách đây'; remain=Math.abs(remaining)+' ngày';
+      } else if (remaining === 0) {
+        card.classList.add('expired'); badge='HẾT HẠN HÔM NAY'; remainLbl='Còn lại'; remain='Hôm nay – không bán';
+      } else if (remaining <= 3) {
+        card.classList.add('warn'); badge='SẮP HẾT HẠN'; remainLbl='Còn lại'; remain=remaining+' ngày – cần xử lý gấp';
+      } else {
+        card.classList.add('ok'); badge='CÒN HẠN'; remainLbl='Còn lại'; remain=remaining+' ngày';
+      }
+
+      document.getElementById('res-badge').textContent      = badge;
+      document.getElementById('res-day').textContent        = fmtDateLong(hsd);
+      document.getElementById('res-date').textContent       = fmtDate(hsd);
+      document.getElementById('res-nsx').textContent        = fmtDate(nsx);
+      document.getElementById('res-dur').textContent        = durText;
+      document.getElementById('res-remain-lbl').textContent = remainLbl;
+      document.getElementById('res-remain').textContent     = remain;
+      card.style.display = 'block';
+      card.classList.add('pop');
+      setTimeout(function(){ card.classList.remove('pop'); }, 300);
+
+      historyData.unshift({ nsx:fmtDate(nsx), hsd:fmtDate(hsd), dur:durText, status:remaining<0?'expired':(remaining<=3?'warn':'ok'), time:Date.now() });
+      if (historyData.length > 10) historyData = historyData.slice(0,10);
+      try { localStorage.setItem('hsd_history', JSON.stringify(historyData)); } catch(e){}
+      renderHistory();
+      card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+
+    function shake(el) {
+      el.classList.remove('shake'); void el.offsetWidth;
+      el.classList.add('shake');
+      setTimeout(function(){ el.classList.remove('shake'); }, 400);
+    }
+
+    function renderHistory() {
+      if (!historyData.length) { document.getElementById('history-section').style.display='none'; return; }
+      document.getElementById('history-section').style.display = 'block';
+      var list = document.getElementById('history-list');
+      list.innerHTML = '';
+      historyData.forEach(function(h) {
+        var sc = h.status==='expired'?'hist-exp':(h.status==='warn'?'hist-warn':'hist-ok');
+        var st = h.status==='expired'?'Hết hạn':(h.status==='warn'?'Sắp hết':'Còn hạn');
+        var div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = '<div class="hist-left"><div class="hist-name">NSX: '+h.nsx+' · '+h.dur+'</div><div class="hist-date">HSD: '+h.hsd+'</div></div><span class="hist-badge '+sc+'">'+st+'</span>';
+        list.appendChild(div);
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-item').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('tab-'+tab).classList.add('active');
+      document.getElementById('panel-'+tab).classList.add('active');
+    }
+
+    function fmtVND(n) { return n.toLocaleString('vi-VN') + ' ₫'; }
+    function fmtVNDshort(n) {
+      if (!n) return '0 ₫';
+      if (n >= 1000000000) { var b=n/1000000000; return (Number.isInteger(b)?b:b.toFixed(1))+' tỷ ₫'; }
+      if (n >= 1000000)    { var t=n/1000000;     return (Number.isInteger(t)?t:t.toFixed(1))+' triệu ₫'; }
+      if (n >= 1000)       { var k=n/1000;         return (Number.isInteger(k)?k:k.toFixed(0))+'k ₫'; }
+      return fmtVND(n);
+    }
+
+    function onPriceChange() {
+      var priceK = parseFloat(document.getElementById('price-input').value) || 0;
+      var pct    = parseFloat(document.getElementById('discount-input').value) || 0;
+      [5,10,20,30,40,50,70].forEach(function(p){
+        var el = document.getElementById('pct-'+p);
+        if (el) el.classList.toggle('active-pct', p === pct);
+      });
+      calculatePrice(priceK, pct);
+    }
+
+    function setDiscount(pct) {
+      document.getElementById('discount-input').value = pct > 0 ? pct : '';
+      onPriceChange();
+    }
+
+    function calculatePrice(priceK, pct) {
+      var resultEl = document.getElementById('price-result-top');
+      var emptyEl  = document.getElementById('price-empty');
+      if (!priceK || priceK <= 0) { resultEl.classList.remove('show'); emptyEl.style.display='block'; return; }
+      emptyEl.style.display = 'none';
+      var original    = priceK * 1000;
+      var discountAmt = Math.round(original * pct / 100);
+      var finalPrice  = original - discountAmt;
+      document.getElementById('pr-original').textContent      = fmtVND(original);
+      document.getElementById('pr-discount-pct2').textContent = pct + '%';
+      document.getElementById('pr-discount-amt').textContent  = pct > 0 ? '- ' + fmtVND(discountAmt) : '0 ₫';
+      document.getElementById('pr-final').textContent         = fmtVND(finalPrice);
+      document.getElementById('pr-saved').textContent         = fmtVNDshort(discountAmt);
+      resultEl.classList.add('show');
+    }
+
+    (function init() {
+      var t = new Date();
+      document.getElementById('nsx').value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+      renderQuick();
+      renderHistory();
+    })();
+  </script>
+</body>
+</html>
